@@ -1,0 +1,800 @@
+type: edu
+custom_name: stage4
+files:
+- name: src/maze/Main.java
+  visible: true
+  text: |
+    package maze;
+
+    public class Main {
+        public static void main(String[] args) {
+            int[][] twoDimArray = {
+                    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+                    {0, 0, 1, 0, 1, 1, 0, 1, 0, 1},
+                    {1, 0, 1, 0, 1, 1, 0, 1, 0, 1},
+                    {1, 0, 0, 0, 1, 1, 0, 1, 0, 1},
+                    {1, 1, 1, 0, 0, 0, 0, 0, 0, 1},
+                    {1, 1, 1, 0, 1, 0, 1, 1, 0, 1},
+                    {1, 1, 0, 0, 1, 0, 1, 1, 0, 1},
+                    {1, 1, 0, 1, 1, 0, 1, 1, 0, 0},
+                    {1, 1, 1, 1, 1, 0, 0, 1, 0, 1},
+                    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+            };
+
+            for (int i = 0; i < twoDimArray.length ; i++){
+                for (int k = 0; k < twoDimArray[i].length ; k++){
+                    if (twoDimArray[i][k] == 1){
+                        System.out.print("\u2588\u2588");
+                    }else{
+                        System.out.print("  ");
+                    }
+
+                }
+                System.out.print("\n");
+            }
+
+        }
+    }
+  learner_created: false
+- name: test/MazeRunnerTest.java
+  visible: false
+  text: |
+    import maze.Main;
+    import org.hyperskill.hstest.stage.StageTest;
+    import org.hyperskill.hstest.testcase.CheckResult;
+    import org.hyperskill.hstest.testcase.TestCase;
+
+    import java.util.ArrayList;
+    import java.util.List;
+    import java.util.stream.Collectors;
+
+    enum Elem {
+        WALL, EMPTY, PATH, DUMMY;
+
+        static Elem get(char c) {
+            if (c == '\u2588') {
+                return WALL;
+            } else if (c == ' ') {
+                return EMPTY;
+            } else if (c == '/') {
+                return PATH;
+            } else {
+                return null;
+            }
+        }
+    }
+
+    class Maze {
+
+        // maze[height][width]
+        // maze[row][col]
+        Elem[][] maze;
+
+        Maze(Maze other) {
+            maze = new Elem[other.getHeight()][other.getWidth()];
+            for (int h = 0; h < other.getHeight(); h++) {
+                for (int w = 0; w < other.getWidth(); w++) {
+                    maze[h][w] = other.maze[h][w];
+                }
+            }
+        }
+
+        Maze(List<String> lines) throws Exception {
+
+            int lineCount = 1;
+            for (String line : lines) {
+                if (line.length() % 2 != 0) {
+                    throw new Exception("Line " + lineCount + " of the maze " +
+                        "contains odd number of characters. Should be always even.");
+                }
+
+                for (char c : line.toCharArray()) {
+                    if (Elem.get(c) == null) {
+                        String hex = Integer.toHexString((int)c);
+                        throw new Exception(
+                            "Found strange symbol in the " + lineCount +
+                                " line of the maze: \\u" + hex);
+                    }
+                }
+
+                int lineWidth = line.length() / 2;
+
+                for (int currWidth = 0; currWidth < lineWidth; currWidth++) {
+                    int currIndex = currWidth * 2;
+                    int nextIndex = currIndex + 1;
+
+                    char currChar = line.charAt(currIndex);
+                    char nextChar = line.charAt(nextIndex);
+
+                    if (currChar != nextChar) {
+                        throw new Exception("There are symbols in " +
+                            "this line that don't appear twice in a row " +
+                            "(at indexes " + currIndex + " and " + nextIndex + ").\n" +
+                            "Line: \"" + line + "\"");
+                    }
+                }
+
+                lineCount++;
+            }
+
+            int mazeWidth = lines.get(0).length() / 2;
+            int mazeHeight = lines.size();
+
+            lineCount = 1;
+            for (String line : lines) {
+                if (line.length() / 2 != mazeWidth) {
+                    throw new Exception("The first line of the maze contains " +
+                        lines.get(0).length() + " characters, but the line #" +
+                        lineCount + " contains " + line.length() + " characters.");
+                }
+                lineCount++;
+            }
+
+            maze = new Elem[mazeHeight][mazeWidth];
+
+            for (int currHeight = 0; currHeight < mazeHeight; currHeight++) {
+                String line = lines.get(currHeight);
+                for (int currWidth = 0; currWidth < mazeWidth; currWidth++) {
+                    char c = line.charAt(currWidth * 2);
+                    maze[currHeight][currWidth] = Elem.get(c);
+                }
+            }
+
+            if (maze[0][0] != Elem.WALL ||
+                maze[0][mazeWidth - 1] != Elem.WALL ||
+                maze[mazeHeight - 1][0] != Elem.WALL ||
+                maze[mazeHeight - 1][mazeWidth - 1] != Elem.WALL) {
+                throw new Exception("All four corners of the maze must be walls.");
+            }
+
+            for (int h = 0; h <= mazeHeight - 3; h++) {
+                for (int w = 0; w <= mazeWidth - 3; w++) {
+                    if (getElem(h, w) == Elem.WALL &&
+                        getElem(h, w + 1) == Elem.WALL &&
+                        getElem(h, w + 2) == Elem.WALL &&
+
+                        getElem(h + 1, w) == Elem.WALL &&
+                        getElem(h + 1, w + 1) == Elem.WALL &&
+                        getElem(h + 1, w + 2) == Elem.WALL &&
+
+                        getElem(h + 2, w) == Elem.WALL &&
+                        getElem(h + 2, w + 1) == Elem.WALL &&
+                        getElem(h + 2, w + 2) == Elem.WALL) {
+
+                        throw new Exception("There are 3x3 block in the maze " +
+                            "consisting only of walls. Such blocks are not allowed.");
+                    }
+                }
+            }
+        }
+
+        Elem[] getRow(int rowNum) {
+            Elem[] newRow = new Elem[getWidth()];
+            for (int i = 0; i < getWidth(); i++) {
+                newRow[i] = maze[rowNum][i];
+            }
+            return newRow;
+        }
+
+        Elem[] getCol(int colNum) {
+            Elem[] newCol = new Elem[getHeight()];
+            for (int i = 0; i < getHeight(); i++) {
+                newCol[i] = maze[i][colNum];
+            }
+            return newCol;
+        }
+
+        Elem getElem(int height, int width) {
+            return maze[height][width];
+        }
+
+        void setElem(int height, int width, Elem elem) {
+            maze[height][width] = elem;
+        }
+
+        int getWidth() {
+            return maze[0].length;
+        }
+
+        int getHeight() {
+            return maze.length;
+        }
+
+        Maze copy() {
+            return new Maze(this);
+        }
+
+        int count(Elem toCount) {
+            int sum = 0;
+            for (Elem[] row : maze) {
+                for (Elem e : row) {
+                    if (e == toCount) {
+                        sum++;
+                    }
+                }
+            }
+            return sum;
+        }
+
+        int countAround(int h, int w, Elem elem) {
+            int sum = 0;
+
+            if (h + 1 < getHeight() &&
+                getElem(h + 1, w) == elem) {
+                sum++;
+            }
+
+            if (h - 1 >= 0 &&
+                getElem(h - 1, w) == elem) {
+                sum++;
+            }
+
+            if (w + 1 < getWidth() &&
+                getElem(h, w + 1) == elem) {
+                sum++;
+            }
+
+            if (w - 1 >= 0 &&
+                getElem(h, w - 1) == elem) {
+                sum++;
+            }
+
+            return sum;
+        }
+
+        int countEntrances() {
+            int entranceCount = 0;
+            for (Elem[] line : new Elem[][] {
+                getCol(0),
+                getCol(getWidth() - 1),
+                getRow(0),
+                getRow(getHeight() - 1)
+            }) {
+
+                for (Elem e : line) {
+                    if (e != Elem.WALL) {
+                        entranceCount++;
+                    }
+                }
+            }
+            return entranceCount;
+        }
+
+        private void propagate(Elem from, Elem to) {
+            boolean didPropagate = true;
+            while (didPropagate) {
+                didPropagate = false;
+                for (int h = 0; h < getHeight(); h++) {
+                    for (int w = 0; w < getWidth(); w++) {
+                        if (getElem(h, w) == from) {
+                            if (countAround(h, w, to) > 0) {
+                                didPropagate = true;
+                                setElem(h, w, to);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        int checkAccessibility() {
+            int entranceHeight = 0;
+            int entranceWidth = 0;
+
+            findPoints: {
+                for (int currWidth : new int[] {0, getWidth() - 1}) {
+                    for (int currHeight = 0; currHeight < getHeight(); currHeight++) {
+                        if (getElem(currHeight, currWidth) != Elem.WALL) {
+                            entranceHeight = currHeight;
+                            entranceWidth = currWidth;
+                            break findPoints;
+                        }
+                    }
+                }
+
+                for (int currHeight : new int[] {0, getHeight() - 1}) {
+                    for (int currWidth = 0; currWidth < getWidth(); currWidth++) {
+                        if (getElem(currHeight, currWidth) != Elem.WALL) {
+                            entranceHeight = currHeight;
+                            entranceWidth = currWidth;
+                            break findPoints;
+                        }
+                    }
+                }
+            }
+
+            Maze copy = copy();
+            copy.setElem(entranceHeight, entranceWidth, Elem.PATH);
+            copy.propagate(Elem.EMPTY, Elem.PATH);
+
+            return copy.count(Elem.EMPTY);
+        }
+
+        int checkPath() throws Exception {
+            int entranceHeight = 0;
+            int entranceWidth = 0;
+
+            for (int currWidth : new int[] {0, getWidth() - 1}) {
+                for (int currHeight = 0; currHeight < getHeight(); currHeight++) {
+                    if (getElem(currHeight, currWidth) == Elem.EMPTY) {
+                        throw new Exception("If the maze is solved all " +
+                            "the entrances should be marked with '//' characters");
+                    }
+                    if (getElem(currHeight, currWidth) == Elem.PATH) {
+                        entranceHeight = currHeight;
+                        entranceWidth = currWidth;
+                    }
+                }
+            }
+
+            for (int currHeight : new int[] {0, getHeight() - 1}) {
+                for (int currWidth = 0; currWidth < getWidth(); currWidth++) {
+                    if (getElem(currHeight, currWidth) == Elem.EMPTY) {
+                        throw new Exception("If the maze is solved all " +
+                            "the entrances should be marked with '//' characters");
+                    }
+                    if (getElem(currHeight, currWidth) == Elem.PATH) {
+                        entranceHeight = currHeight;
+                        entranceWidth = currWidth;
+                    }
+                }
+            }
+
+            for (int h = 0; h < getHeight(); h++) {
+                for (int w = 0; w < getWidth(); w++) {
+                    if (getElem(h, w) == Elem.PATH) {
+                        if (countAround(h, w, Elem.PATH) >= 3) {
+                            throw new Exception("The escape path shouldn't branch off, " +
+                                "it should go in one direction.");
+                        }
+                    }
+                }
+            }
+
+            Maze copy = copy();
+            copy.setElem(entranceHeight, entranceWidth, Elem.DUMMY);
+            copy.propagate(Elem.PATH, Elem.DUMMY);
+
+            return copy.count(Elem.PATH);
+        }
+
+        boolean equals(Maze other) {
+            if (getWidth() != other.getWidth() || getHeight() != other.getHeight()) {
+                return false;
+            }
+            for (int h = 0; h < getHeight(); h++) {
+                for (int w = 0; w < getWidth(); w++) {
+                    if (getElem(h, w) == Elem.WALL && other.getElem(h, w) != Elem.WALL ||
+                        getElem(h, w) != Elem.WALL && other.getElem(h, w) == Elem.WALL) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        static List<Maze> parse(String text) throws Exception {
+
+            List<Maze> mazes = new ArrayList<>();
+
+            List<String> lines = text
+                .lines()
+                .collect(Collectors.toList());
+
+            lines.add("");
+
+            List<String> mazeLines = new ArrayList<>();
+
+            boolean isStarted = false;
+            for (String line : lines) {
+                if (line.contains("\u2588")) {
+                    isStarted = true;
+                    mazeLines.add(line);
+                } else if (isStarted) {
+                    isStarted = false;
+                    Maze maze = new Maze(mazeLines);
+                    mazes.add(maze);
+                    mazeLines.clear();
+                }
+            }
+
+            return mazes;
+        }
+
+    }
+
+    class Clue {
+        int size;
+        boolean withPath;
+        int count;
+        Clue(int s, int c, boolean wp) {
+            size = s;
+            count = c;
+            withPath = wp;
+        }
+    }
+
+    public class MazeRunnerTest extends StageTest<Clue> {
+
+        @Override
+        public List<TestCase<Clue>> generate() {
+            return List.of(
+                new TestCase<Clue>()
+                    .setInput("1\n17\n0")
+                    .setAttach(new Clue(17, 1, false)),
+
+                new TestCase<Clue>()
+                    .setInput("1\n29\n3\ntest_maze.txt\n0")
+                    .setAttach(new Clue(29, 1, false)),
+
+                new TestCase<Clue>()
+                    .setInput("2\ntest_maze.txt\n4\n0")
+                    .setAttach(new Clue(29, 1, false)),
+
+                new TestCase<Clue>()
+                    .setInput("1\n35\n3\ntest_maze.txt\n0")
+                    .setAttach(new Clue(35, 1, false)),
+
+                new TestCase<Clue>()
+                    .setInput("2\ntest_maze.txt\n4\n0")
+                    .setAttach(new Clue(35, 1, false)),
+
+                new TestCase<Clue>()
+                    .setInput("2\ntest_maze.txt\n4\n5\n0")
+                    .setAttach(new Clue(35, 2, true))
+            );
+        }
+
+        @Override
+        public CheckResult check(String reply, Clue clue) {
+
+            List<Maze> mazes;
+            try {
+                mazes = Maze.parse(reply);
+            } catch (Exception e) {
+                return CheckResult.wrong(
+                    e.getMessage()
+                );
+            }
+
+            if (mazes.size() == 0) {
+                return CheckResult.wrong(
+                    "No mazes found in the output. Check if you are using " +
+                        "\\u2588 character to print the maze."
+                );
+            }
+
+            if (mazes.size() != clue.count) {
+                if (clue.count == 1) {
+                    return CheckResult.wrong(
+                        "Found " + mazes.size() + " mazes in the output. " +
+                            "Should be only one maze."
+                    );
+                } else {
+                    return CheckResult.wrong(
+                        "Found " + mazes.size() + " mazes in the output. " +
+                            "Should be two mazes."
+                    );
+                }
+            }
+
+            Maze fst = mazes.get(0);
+            Maze snd = mazes.size() == 2 ? mazes.get(1) : null;
+
+            if (snd != null && !fst.equals(snd)) {
+                return CheckResult.wrong(
+                    "The two mazes shown should be equal, but they are different."
+                );
+            }
+
+            if (fst.count(Elem.PATH) != 0) {
+                return CheckResult.wrong(
+                    "The first maze should not contain '/' characters."
+                );
+            }
+
+            int entrances = fst.countEntrances();
+            if (entrances != 2) {
+                return new CheckResult(false,
+                    "There are " + entrances + " entrances to the maze, " +
+                        "should be only two.");
+            }
+
+            int emptyLeft = fst.checkAccessibility();
+            if (emptyLeft > 0) {
+                return new CheckResult(false,
+                    "There are " + emptyLeft + " empty " +
+                        "cells that are inaccessible from the entrance of the maze " +
+                        "(or there is no way from the entrance to the exit)."
+                );
+            }
+
+            if (fst.getHeight() != clue.size) {
+                return new CheckResult(false,
+                    "Number of rows in the maze is incorrect. " +
+                        "It's " + fst.getHeight() + ", but should be " + clue.size);
+            }
+
+            if (fst.getWidth() != clue.size) {
+                return new CheckResult(false,
+                    "Number of columns in the maze is incorrect. " +
+                        "It's " + fst.getWidth() + ", but should be " + clue.size);
+            }
+
+            if (snd != null && clue.withPath) {
+                try {
+                    int pathLeft = snd.checkPath();
+                    if (pathLeft > 0) {
+                        return new CheckResult(false,
+                            "There are " + pathLeft + " escape path ('//') " +
+                                "cells that are separated from the escape path of the maze " +
+                                "(or there is a break somewhere in the escape path)."
+                        );
+                    }
+                } catch (Exception e) {
+                    return CheckResult.wrong(
+                        e.getMessage()
+                    );
+                }
+            }
+
+            return CheckResult.correct();
+        }
+    }
+  learner_created: false
+- name: maze.txt
+  visible: true
+  text: "��\0\x05ur\0\x03[[I\x17��O\x19��<\x02\0\0xp\0\0\0\x0fur\0\x02[IM�`&v겥\x02\
+    \0\0xp\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\
+    \0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01uq\0\
+    ~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\
+    \x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\
+    \0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\
+    \0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\
+    \x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\
+    \0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\
+    \0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\
+    \x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\
+    \0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\
+    \x01\0\0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\
+    uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    \0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    \0\0\0\x01"
+  learner_created: true
+- name: src/maze/Maze.java
+  visible: true
+  text: "package maze;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\n\
+    import java.util.List;\nimport java.util.Random;\n\npublic class Maze {\n\n  \
+    \  //print maze\n    public static void print_maze(int[][] twoDimArray) {\n  \
+    \      for (int[] ints : twoDimArray) {\n            for (int anInt : ints) {\n\
+    \                if (anInt == 1) {\n                    System.out.print(\"\\\
+    u2588\\u2588\");\n                } else {\n                    System.out.print(\"\
+    \  \");\n                }\n\n            }\n            System.out.print(\"\\\
+    n\");\n        }\n    }\n\n    //Create maze\n    public static int[][] init_maze(final\
+    \ int width, final int height) {\n\n        int[][] maze = new int[height][width];\n\
+    \        // fills the maze with 3 to represent not-visited\n        for (int i\
+    \ = 0; i < height; i++) {\n            int[] line = new int[width];\n        \
+    \    for (int k = 0; k < width; k++) {\n                line[k] = 3;\n       \
+    \     }\n            maze[i] = line;\n        }\n        generate_maze_shape(width,\
+    \ height, maze);\n        return maze;\n    }\n\n    // generates the maze's shape\
+    \ using prim's algorithm.\n    private static void generate_maze_shape(final int\
+    \ width, final int height, int[][] maze) {\n        Random rand = new Random();\n\
+    \n        int starting_width = rand.nextInt(width - 1);\n        int starting_height\
+    \ = rand.nextInt(height - 1);\n\n        // checks if cell is on the sides of\
+    \ the maze\n        if (starting_height == 0)\n            starting_height +=\
+    \ 1;\n        if (starting_height == height - 1)\n            starting_height\
+    \ -= 1;\n        if (starting_width == 0)\n            starting_width += 1;\n\
+    \        if (starting_width == width - 1)\n            starting_width -= 1;\n\n\
+    \        //sets starting point to a passage\n        maze[starting_height][starting_width]\
+    \ = 0;\n\n        // set the locations around passage as walls and store\n   \
+    \     ArrayList<List<Integer>> walls = new ArrayList<>();\n        walls.add(Arrays.asList(starting_height\
+    \ - 1, starting_width));\n        walls.add(Arrays.asList(starting_height, starting_width\
+    \ - 1));\n        walls.add(Arrays.asList(starting_height, starting_width + 1));\n\
+    \        walls.add(Arrays.asList(starting_height + 1, starting_width));\n\n  \
+    \      // set blocks around starting point to walls.\n        maze[starting_height\
+    \ - 1][starting_width] = 1;\n        maze[starting_height][starting_width - 1]\
+    \ = 1;\n        maze[starting_height][starting_width + 1] = 1;\n        maze[starting_height\
+    \ + 1][starting_width] = 1;\n\n\n        while (!walls.isEmpty()) {\n        \
+    \    int random_cell = rand.nextInt(walls.size());\n            var rand_wall\
+    \ = walls.remove(random_cell);\n\n            // Check if it is a left wall\n\
+    \            if (rand_wall.get(1) != 0) {\n                // -1 is one to the\
+    \ right of the cell\n                if (maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ - 1] == 3\n                        // +1 is one to the left of the cell\n  \
+    \                      && maze[rand_wall.get(0)][rand_wall.get(1) + 1] == 0) {\n\
+    \                    // Find the number of surrounding cells\n               \
+    \     int s_cells = surroundingCells(rand_wall, maze);\n\n                   \
+    \ if (s_cells < 2) {\n                        // Denote the new path\n       \
+    \                 maze[rand_wall.get(0)][rand_wall.get(1)] = 0;\n\n          \
+    \              //Mark the new walls\n                        //Upper cell\n  \
+    \                      if (rand_wall.get(0) != 0) {\n                        \
+    \    if (maze[rand_wall.get(0) - 1][rand_wall.get(1)] != 0)\n                \
+    \                maze[rand_wall.get(0) - 1][rand_wall.get(1)] = 1;\n         \
+    \                   //if ([rand_wall[0] - 1, rand_wall[1]]not in walls):\n   \
+    \                         if (!walls.contains(Arrays.asList(rand_wall.get(0) -\
+    \ 1, rand_wall.get(1))))\n                                walls.add(Arrays.asList(rand_wall.get(0)\
+    \ - 1, rand_wall.get(1)));\n                        }\n\n                    \
+    \    // Bottom cell\n                        if (rand_wall.get(0) != height -\
+    \ 1) {\n                            if (maze[rand_wall.get(0) + 1][rand_wall.get(1)]\
+    \ != 0)\n                                maze[rand_wall.get(0) + 1][rand_wall.get(1)]\
+    \ = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0)\
+    \ + 1, rand_wall.get(1))))\n                                walls.add(Arrays.asList(rand_wall.get(0)\
+    \ + 1, rand_wall.get(1)));\n                        }\n\n                    \
+    \    // Leftmost cell\n                        if (rand_wall.get(1) != 0) {\n\
+    \                            if (maze[rand_wall.get(0)][rand_wall.get(1) - 1]\
+    \ != 0)\n                                maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ - 1] = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) - 1)))\n                                walls.add(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) - 1));\n                        }\n                    }\n\
+    \                    // Delete wall\n                    walls.removeIf(wall ->\
+    \ wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));\n     \
+    \           }\n            }\n            // Check if it is an upper wall\n  \
+    \          if (rand_wall.get(0) != 0) {\n                if (maze[rand_wall.get(0)\
+    \ - 1][rand_wall.get(1)] == 3\n                        && maze[rand_wall.get(0)\
+    \ + 1][rand_wall.get(1)] == 0) {\n                    // Find the number of surrounding\
+    \ cells\n                    var s_cells = surroundingCells(rand_wall, maze);\n\
+    \n                    if (s_cells < 2) {\n                        // Denote the\
+    \ new path\n                        maze[rand_wall.get(0)][rand_wall.get(1)] =\
+    \ 0;\n\n                        //Mark the new walls\n                       \
+    \ //Upper cell\n                        if (rand_wall.get(0) != 0) {\n       \
+    \                     if (maze[rand_wall.get(0) - 1][rand_wall.get(1)] != 0)\n\
+    \                                maze[rand_wall.get(0) - 1][rand_wall.get(1)]\
+    \ = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0)\
+    \ - 1, rand_wall.get(1))))\n                                walls.add(Arrays.asList(rand_wall.get(0)\
+    \ - 1, rand_wall.get(1)));\n                        }\n\n                    \
+    \    // Leftmost cell\n                        if (rand_wall.get(1) != 0) {\n\
+    \                            if (maze[rand_wall.get(0)][rand_wall.get(1) - 1]\
+    \ != 0)\n                                maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ - 1] = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) - 1)))\n                                walls.add(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) - 1));\n                        }\n\n                     \
+    \   // Rightmost cell\n                        if (rand_wall.get(1) != width -\
+    \ 1) {\n                            if (maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ + 1] != 0)\n                                maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ + 1] = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) + 1)))\n                                walls.add(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) + 1));\n                        }\n                    }\n\
+    \                    // Delete wall\n                    walls.removeIf(wall ->\
+    \ wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));\n     \
+    \           }\n            }\n            // Check the bottom wall\n         \
+    \   if (rand_wall.get(0) != height - 1) {\n                if (maze[rand_wall.get(0)\
+    \ + 1][rand_wall.get(1)] == 3\n                        && maze[rand_wall.get(0)\
+    \ - 1][rand_wall.get(1)] == 0) {\n                    // Find the number of surrounding\
+    \ cells\n                    var s_cells = surroundingCells(rand_wall, maze);\n\
+    \n                    if (s_cells < 2) {\n                        // Denote the\
+    \ new path\n                        maze[rand_wall.get(0)][rand_wall.get(1)] =\
+    \ 0;\n\n                        //Mark the new walls\n                       \
+    \ //Upper cell\n                        if (rand_wall.get(0) != height - 1) {\n\
+    \                            if (maze[rand_wall.get(0) + 1][rand_wall.get(1)]\
+    \ != 0)\n                                maze[rand_wall.get(0) + 1][rand_wall.get(1)]\
+    \ = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0)\
+    \ + 1, rand_wall.get(1))))\n                                walls.add(Arrays.asList(rand_wall.get(0)\
+    \ + 1, rand_wall.get(1)));\n                        }\n\n                    \
+    \    // Leftmost cell\n                        if (rand_wall.get(1) != 0) {\n\
+    \                            if (maze[rand_wall.get(0)][rand_wall.get(1) - 1]\
+    \ != 0)\n                                maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ - 1] = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) - 1)))\n                                walls.add(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) - 1));\n                        }\n\n                     \
+    \   // Rightmost cell\n                        if (rand_wall.get(1) != width -\
+    \ 1) {\n                            if (maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ + 1] != 0)\n                                maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ + 1] = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) + 1)))\n                                walls.add(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) + 1));\n                        }\n                    }\n\
+    \                    // Delete wall\n                    walls.removeIf(wall ->\
+    \ wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));\n     \
+    \           }\n            }\n            // Check the right wall\n          \
+    \  if (rand_wall.get(1) != width - 1) {\n                if (maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ + 1] == 3\n                        && maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ - 1] == 0) {\n                    // Find the number of surrounding cells\n\
+    \                    var s_cells = surroundingCells(rand_wall, maze);\n\n    \
+    \                if (s_cells < 2) {\n                        // Denote the new\
+    \ path\n                        maze[rand_wall.get(0)][rand_wall.get(1)] = 0;\n\
+    \n                        //Mark the new walls\n                        //Upper\
+    \ cell\n                        if (rand_wall.get(1) != width - 1) {\n       \
+    \                     if (maze[rand_wall.get(0)][rand_wall.get(1) + 1] != 0)\n\
+    \                                maze[rand_wall.get(0)][rand_wall.get(1) + 1]\
+    \ = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) + 1)))\n                                walls.add(Arrays.asList(rand_wall.get(0),\
+    \ rand_wall.get(1) + 1));\n                        }\n\n                     \
+    \   // Leftmost cell\n                        if (rand_wall.get(0) != height -\
+    \ 1) {\n                            if (maze[rand_wall.get(0) + 1][rand_wall.get(1)]\
+    \ != 0)\n                                maze[rand_wall.get(0) + 1][rand_wall.get(1)]\
+    \ = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0)\
+    \ + 1, rand_wall.get(1))))\n                                walls.add(Arrays.asList(rand_wall.get(0)\
+    \ + 1, rand_wall.get(1)));\n                        }\n\n                    \
+    \    // Rightmost cell\n                        if (rand_wall.get(0) != 0) {\n\
+    \                            if (maze[rand_wall.get(0) - 1][rand_wall.get(1)]\
+    \ != 0)\n                                maze[rand_wall.get(0) - 1][rand_wall.get(1)]\
+    \ = 1;\n                            //if ([rand_wall[0] - 1, rand_wall[1]]not\
+    \ in walls):\n                            if (!walls.contains(Arrays.asList(rand_wall.get(0)\
+    \ - 1, rand_wall.get(1))))\n                                walls.add(Arrays.asList(rand_wall.get(0)\
+    \ - 1, rand_wall.get(1)));\n                        }\n                    }\n\
+    \                    // Delete wall\n                    walls.removeIf(wall ->\
+    \ wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));\n     \
+    \           }\n            }\n            // Delete the wall from the list anyway\n\
+    \            walls.removeIf(wall -> wall.get(0) == rand_wall.get(0) && wall.get(1)\
+    \ == rand_wall.get(1));\n        }\n        // Mark the remaining unvisited cells\
+    \ as walls\n        for (int i = 0; i < height; i++) {\n            for (int j\
+    \ = 0; j < width; j++) {\n                if (maze[i][j] == 3)\n             \
+    \       maze[i][j] = 1;\n            }\n        }\n\n        // Set entrance\n\
+    \        for (int i = 0; i < width; i++) {\n            if (maze[1][i] == 0) {\n\
+    \                maze[0][i] = 0;\n                break;\n            }\n    \
+    \    }\n        //set end\n        for (int i = 0; i < width - 1; i++) {\n   \
+    \         if (maze[height - 2][i] == 0) {\n                maze[height - 1][i]\
+    \ = 0;\n                break;\n            }\n        }\n    }\n\n    // Find\
+    \ number of surrounding cells\n    private static int surroundingCells(List<Integer>\
+    \ rand_wall, int[][] maze) {\n        int s_cells = 0;\n        if (maze[rand_wall.get(0)\
+    \ - 1][rand_wall.get(1)] == 0)\n            s_cells += 1;\n        if (maze[rand_wall.get(0)\
+    \ + 1][rand_wall.get(1)] == 0)\n            s_cells += 1;\n        if (maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ - 1] == 0)\n            s_cells += 1;\n        if (maze[rand_wall.get(0)][rand_wall.get(1)\
+    \ + 1] == 0)\n            s_cells += 1;\n\n        return s_cells;\n    }\n\n\
+    \    public static void mazeSearch(int[][] maze) {\n        \n    }\n\n\n}\n"
+  learner_created: true
+- name: test_maze.txt
+  visible: true
+  text: "��\0\x05ur\0\x03[[I\x17��O\x19��<\x02\0\0xp\0\0\0\x0fur\0\x02[IM�`&v겥\x02\
+    \0\0xp\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\
+    \0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\
+    \x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\0\
+    \0\0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\0\0\
+    \0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    \0\0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\
+    \x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\
+    \x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\
+    \0\0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\
+    \0\0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\
+    \0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\
+    \x01\0\0\0\x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\
+    \x01uq\0~\0\x02\0\0\0\x0f\0\0\0\x01\0\0\0\0\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\
+    \x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\
+    \0\x01\0\0\0\x01"
+  learner_created: false
+feedback_link: https://hyperskill.org/projects/47/stages/254/implement
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Sun, 06 Jun 2021 15:11:20 UTC
+record: -1

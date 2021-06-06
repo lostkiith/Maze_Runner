@@ -1,0 +1,20 @@
+# Project exclude paths
+/.gradle/
+/Maze Runner/task/build/
+/Maze Runner/task/out/
+/Maze Runner/task/out/production/classes/
+/Maze Runner/task/out/test/classes/
+/Problems/Find the nearest number/out/
+/Problems/Find the nearest number/out/production/classes/
+/Problems/Spell checker/out/
+/Problems/Spell checker/out/production/classes/
+/Problems/Split a list into sublists/out/
+/Problems/Split a list into sublists/out/production/classes/
+/Problems/The height of a tree (v1)/out/
+/Problems/The height of a tree (v1)/out/production/classes/
+/Problems/The height of a tree (v2)/out/
+/Problems/The height of a tree (v2)/out/production/classes/
+/Topics/Random/Find the seed/out/
+/Topics/Random/Find the seed/out/production/classes/
+/Topics/Random/Generate random numbers/out/
+/Topics/Random/Generate random numbers/out/production/classes/
