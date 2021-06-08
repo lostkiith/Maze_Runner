@@ -1,6 +1,7 @@
 package maze;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class Maze {
 
@@ -263,19 +264,9 @@ public class Maze {
         }
 
         // Set entrance
-        for (int i = 0; i < width; i++) {
-            if (maze[1][i] == 0) {
-                maze[0][i] = 0;
-                break;
-            }
-        }
+        IntStream.range(0, width).filter(i -> maze[1][i] == 0).findFirst().ifPresent(i -> maze[0][i] = 0);
         //set end
-        for (int i = 0; i < width - 1; i++) {
-            if (maze[height - 2][i] == 0) {
-                maze[height - 1][i] = 0;
-                break;
-            }
-        }
+        IntStream.range(0, width - 1).filter(i -> maze[height - 2][i] == 0).findFirst().ifPresent(i -> maze[height - 1][i] = 0);
     }
 
     // Find number of surrounding cells
