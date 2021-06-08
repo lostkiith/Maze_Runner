@@ -119,7 +119,7 @@ public class Maze {
                         }
                     }
                     // Delete wall
-                    walls.removeIf(wall -> wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));
+                    walls.removeIf(wall -> wall.get(0).equals(rand_wall.get(0)) && wall.get(1).equals(rand_wall.get(1)));
                 }
             }
             // Check if it is an upper wall
@@ -162,7 +162,7 @@ public class Maze {
                         }
                     }
                     // Delete wall
-                    walls.removeIf(wall -> wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));
+                    walls.removeIf(wall -> wall.get(0).equals(rand_wall.get(0)) && wall.get(1).equals(rand_wall.get(1)));
                 }
             }
             // Check the bottom wall
@@ -205,7 +205,7 @@ public class Maze {
                         }
                     }
                     // Delete wall
-                    walls.removeIf(wall -> wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));
+                    walls.removeIf(wall -> wall.get(0).equals(rand_wall.get(0)) && wall.get(1).equals(rand_wall.get(1)));
                 }
             }
             // Check the right wall
@@ -248,11 +248,11 @@ public class Maze {
                         }
                     }
                     // Delete wall
-                    walls.removeIf(wall -> wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));
+                    walls.removeIf(wall -> wall.get(0).equals(rand_wall.get(0)) && wall.get(1).equals(rand_wall.get(1)));
                 }
             }
             // Delete the wall from the list anyway
-            walls.removeIf(wall -> wall.get(0) == rand_wall.get(0) && wall.get(1) == rand_wall.get(1));
+            walls.removeIf(wall -> wall.get(0).equals(rand_wall.get(0)) && wall.get(1).equals(rand_wall.get(1)));
         }
         // Mark the remaining unvisited cells as walls
         for (int i = 0; i < height; i++) {
@@ -293,17 +293,18 @@ public class Maze {
         return s_cells;
     }
 
+    // search the maze for an exit route
     public static void mazeSearch(int[][] maze) {
         int [][] mazeRoute = maze.clone();
         mazeRoute[0][1] = 4;
-        ArrayList<List<Integer>> rat_path = new ArrayList<>();
-        rat_path.add(Arrays.asList(0,1));
-        backTrack(mazeRoute, rat_path);
+        ArrayList<List<Integer>> routeOut = new ArrayList<>();
+        routeOut.add(Arrays.asList(0,1));
+        backTrack(mazeRoute, routeOut);
     }
 
-    public static void backTrack(int[][] mazeRoute, ArrayList<List<Integer>> rat_path) {
-        var current_cell = rat_path.get(rat_path.size() - 1);
-        //Maze.print_maze(mazeRoute);
+    // the algorithm to find ther exit using backtrack
+    public static void backTrack(int[][] mazeRoute, ArrayList<List<Integer>> routeOut) {
+        var current_cell = routeOut.get(routeOut.size() - 1);
 
         if (current_cell.get(0) == mazeRoute.length - 1 && current_cell.get(1) == 1) {
             Maze.print_maze(mazeRoute);
@@ -312,36 +313,35 @@ public class Maze {
 
         if (mazeRoute[current_cell.get(0) + 1][current_cell.get(1)] == 0) {
             mazeRoute[current_cell.get(0) + 1][current_cell.get(1)] = 4;
-            rat_path.add(Arrays.asList(current_cell.get(0) + 1, current_cell.get(1)));
-            backTrack(mazeRoute, rat_path);
+            routeOut.add(Arrays.asList(current_cell.get(0) + 1, current_cell.get(1)));
+            backTrack(mazeRoute, routeOut);
         }
 
         if (mazeRoute[current_cell.get(0)][current_cell.get(1) + 1] == 0) {
             mazeRoute[current_cell.get(0)][current_cell.get(1) + 1] = 4;
-            rat_path.add(Arrays.asList(current_cell.get(0), current_cell.get(1) + 1));
-            backTrack(mazeRoute, rat_path);
+            routeOut.add(Arrays.asList(current_cell.get(0), current_cell.get(1) + 1));
+            backTrack(mazeRoute, routeOut);
         }
 
         if (mazeRoute[current_cell.get(0) - 1][current_cell.get(1)] == 0) {
             mazeRoute[current_cell.get(0) - 1][current_cell.get(1)] = 4;
-            rat_path.add(Arrays.asList(current_cell.get(0) - 1, current_cell.get(1)));
-            backTrack(mazeRoute, rat_path);
+            routeOut.add(Arrays.asList(current_cell.get(0) - 1, current_cell.get(1)));
+            backTrack(mazeRoute, routeOut);
         }
 
         if (mazeRoute[current_cell.get(0)][current_cell.get(1) - 1] == 0) {
             mazeRoute[current_cell.get(0)][current_cell.get(1) - 1] = 4;
-            rat_path.add(Arrays.asList(current_cell.get(0), current_cell.get(1) - 1));
-            backTrack(mazeRoute, rat_path);
+            routeOut.add(Arrays.asList(current_cell.get(0), current_cell.get(1) - 1));
+            backTrack(mazeRoute, routeOut);
         }
 
-        current_cell = rat_path.get(rat_path.size() - 1);
+        current_cell = routeOut.get(routeOut.size() - 1);
         if (!(current_cell.get(0) == mazeRoute.length - 1 && current_cell.get(1) == 1)) {
-            var cell_to_remove = rat_path.get(rat_path.size() - 1);
-            rat_path.remove(cell_to_remove);
+            var cell_to_remove = routeOut.get(routeOut.size() - 1);
+            routeOut.remove(cell_to_remove);
             mazeRoute[cell_to_remove.get(0)][cell_to_remove.get(1)] = 0;
         }
     }
-
 }
 
 
