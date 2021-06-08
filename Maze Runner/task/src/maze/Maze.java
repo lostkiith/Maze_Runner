@@ -5,6 +5,8 @@ import java.util.stream.IntStream;
 
 public class Maze {
 
+    // ref https://medium.com/swlh/fun-with-python-1-maze-generator-931639b4fb7e
+
     //print maze
     public static void print_maze(int[][] twoDimArray) {
         for (int[] ints : twoDimArray) {
